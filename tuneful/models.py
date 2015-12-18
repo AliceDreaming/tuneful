@@ -17,9 +17,9 @@ class Song(Base):
     def as_dictionary(self):
         song = {
             "id": self.id,
-            "file": {
-                "id": song_file.id,
-                "name": song_file.filename
+            "song_file": {
+                "id": self.song_file.id,
+                "filename": self.song_file.filename
             }
         }
         return song

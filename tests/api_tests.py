@@ -39,7 +39,7 @@ class TestAPI(unittest.TestCase):
 
     def test_get_empty_songs(self):
         """Getting songs from an mepty database"""
-        response=self.client.get("/api/songs")
+        response=self.client.get("/api/songs", headers=[("Accept", "application/json")])
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.mimetype, "application/json")
     
@@ -59,7 +59,7 @@ class TestAPI(unittest.TestCase):
         session.add_all([songA, songB, fileA, fileB])
         session.commit()
         
-        response = self.client.get("/api/songs")
+        response = self.client.get("/api/songs", headers=[("Accept", "application/json")])
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.mimetype, "application/json")
@@ -68,11 +68,40 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(len(songs), 2)
         
         song0=songs[0]
-        self.assertEqual(song0.id, songA.id)
-        self.assertEqual(song0.song_file.id, fileA.id)
-        self.assertEqual(song0.song_file.filename, fileA.filename)
+        self.assertEqual(song0["id"], songA.id)
+        self.assertEqual(song0["song_file"]["id"], fileA.id)
+        self.assertEqual(song0["song_file"]["filename"], fileA.filename)
         
         song1=songs[1]
-        self.assertEqual(song1.id, songB.id)
-        self.assertEqual(song1.song_file.id, fileB.id)
-        self.assertEqual(song1.song_file.filename, fileB.fileName)
+        self.assertEqual(song1["id"], songB.id)
+        self.assertEqual(song1["song_file"]["id"], fileB.id)
+        self.assertEqual(song1["song_file"]["filename"], fileB.filename)
+        
+    def test_songs_post(self):
+        song={
+            "song_file":{
+                "filename":"first_song"
+                }
+        }
+        
+        response = self.client.post("/api/songs",
+            data=json.dumps(song),
+            content_type="application/json",
+            headers=[("Accept", "application/json")]
+        )
+        
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.mimetype, "application/json")
+        self.assertEqual(urlparse(response.headers.get("Location")).path,
+                         "/api/songs/1")
+
+        data = json.loads(response.data.decode("ascii"))
+        
+        self.assertEqual(data["song_file"]["filename"], data["song_file"]["filename"])
+
+        songs = session.query(models.Song).all()
+        self.assertEqual(len(songs), 1)
+
+        song0 = songs[0]
+        self.assertEqual(song0.song_file.filename, data["song_file"]["filename"])
+ 
